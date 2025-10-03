@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +23,7 @@ public class RestauranteConcurrente {
     private final AtomicLong servidos;
     private int mesasLlenas;
     private final List<Thread> cocinerosList;
+    private AtomicBoolean terminado;
 
     public RestauranteConcurrente() {
         this.cocineroEsperando = new AtomicLong(0);
@@ -32,6 +34,7 @@ public class RestauranteConcurrente {
         this.servidos = new AtomicLong(0);
         this.mesasLlenas = 0;
         this.mesasLibres = new LinkedBlockingQueue<>();
+        terminado = new AtomicBoolean(false);
     }
 
     public void start(){
@@ -41,8 +44,8 @@ public class RestauranteConcurrente {
         iniciarMesa();
         llegadaClientes();
         try {
-            sleep(130000);
-            cocinerosList.forEach(Thread::interrupt);
+            terminado.set(true);
+            sleep(10000);
             for (Thread thread : cocinerosList) {
                 thread.join();
             }
@@ -56,9 +59,9 @@ public class RestauranteConcurrente {
     }
 
     private void iniciarCocineros(){
-        Thread cocinero1 = new Thread(new Cocineros("Chef Mendax", pedidosQueue, servidos,tiempoEsperaTotal,cocineroEsperando), "Chef-Mendax");
-        Thread cocinero2 = new Thread(new Cocineros("Chef Soraya", pedidosQueue, servidos, tiempoEsperaTotal,cocineroEsperando), "Chef-Soraya");
-        Thread cocinero3 = new Thread(new Cocineros("Chef Redei", pedidosQueue, servidos,tiempoEsperaTotal,cocineroEsperando), "Chef-Redei");
+        Thread cocinero1 = new Thread(new Cocineros("Chef Mendax", pedidosQueue, servidos,tiempoEsperaTotal,cocineroEsperando,terminado), "Chef-Mendax");
+        Thread cocinero2 = new Thread(new Cocineros("Chef Soraya", pedidosQueue, servidos, tiempoEsperaTotal,cocineroEsperando, terminado), "Chef-Soraya");
+        Thread cocinero3 = new Thread(new Cocineros("Chef Redei", pedidosQueue, servidos,tiempoEsperaTotal,cocineroEsperando, terminado), "Chef-Redei");
         cocinerosList.add(cocinero1);
         cocinerosList.add(cocinero2);
         cocinerosList.add(cocinero3);
@@ -75,8 +78,9 @@ public class RestauranteConcurrente {
 
     private void llegadaClientes(){
         Thread generadorClientes = new Thread(() -> {
+            try {
             for (int i = 1; i <= 100; i++) {
-                try {
+
                     Mesa mesa = mesasLibres.poll(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
                     if (mesa != null) {
                         Cliente cliente = new Cliente(i, pedidosQueue, mesa, mesasLibres, clientesAtendidos);
@@ -88,13 +92,20 @@ public class RestauranteConcurrente {
                                 i);
                     }
                     Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    currentThread().interrupt();
-                    Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en la llegada de clientes", e);
-                }
+
+            }
+            } catch (InterruptedException e) {
+                currentThread().interrupt();
+                Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en la llegada de clientes", e);
             }
         });
         generadorClientes.start();
+        try {
+            generadorClientes.join();
+        } catch (InterruptedException e) {
+            currentThread().interrupt();
+            Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en la llegada de clientes", e);
+        }
     }
 
     private void resultadoFinal(long tiempoTotal){

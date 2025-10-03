@@ -4,6 +4,7 @@ package org.example.ejercicio3;
 
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,18 +16,20 @@ public class Cocineros implements Runnable {
     private final AtomicLong servidos;
     private final AtomicLong tiempoEsperaTotal;
     private final AtomicLong tiempoEsperando;
-    public Cocineros(String nombre, BlockingQueue<Pedidos> mesaPedidos, AtomicLong servidos, AtomicLong tiempoEspera, AtomicLong tiempoLibre) {
+    private AtomicBoolean terminado;
+    public Cocineros(String nombre, BlockingQueue<Pedidos> mesaPedidos, AtomicLong servidos, AtomicLong tiempoEspera, AtomicLong tiempoLibre, AtomicBoolean terminado) {
         this.nombre = nombre;
         this.mesaPedidos = mesaPedidos;
         this.servidos = servidos;
         this.tiempoEsperaTotal = tiempoEspera;
         this.tiempoEsperando = tiempoLibre;
+        this.terminado = terminado;
     }
 
     @Override
     public void run() {
         try {
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && !terminado.get()) {
                 long inicioEspera = System.currentTimeMillis();
                 Pedidos pedido = mesaPedidos.take();
                 long tiempoEspera = System.currentTimeMillis() - inicioEspera;
