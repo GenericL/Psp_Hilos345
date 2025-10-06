@@ -94,7 +94,7 @@ public class ParkingInteligente {
 
     private void colaCochesMeterseEnSemaforo() {
         colaManager = new Thread(() -> {
-            while (!terminado) {
+            while (!terminado ) {
                 if (ocupacionMaximaVIP.get() < 5 - semaforoPlazasVIP.availablePermits()) {
                     ocupacionMaximaVIP.set(5 - semaforoPlazasVIP.availablePermits());
                 }
