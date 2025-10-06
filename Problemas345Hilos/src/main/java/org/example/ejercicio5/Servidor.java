@@ -1,6 +1,6 @@
 package org.example.ejercicio5;
 
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -14,14 +14,12 @@ public class Servidor {
         this.executor = Executors.newFixedThreadPool(numberOfThreads);
     }
 
-    public void procesarDescarga(Cliente cliente, Archivo archivo) {
-        Future<String> future =
+    public Future<String> procesarDescarga(Cliente cliente, Archivo archivo) {
+        CompletableFuture<String> future = new CompletableFuture<>();
         executor.submit(() -> {
-            System.out.printf("Cliente %d: Iniciando descarga del archivo %s%n", cliente.getId(), archivo.getNombre());
-            Thread.sleep(archivo.getTipo().getSizeMB());
-            String resultado = archivo.getNombre();
-            return resultado;
+
         });
+        return future;
     }
     public void cerrarExecutor() {
         executor.shutdown();

@@ -21,8 +21,12 @@ public class ParkingInteligente {
     private final AtomicInteger ingresosTotales;
     private final AtomicInteger ocupacionMaximaNormal;
     private final AtomicInteger ocupacionMaximaVIP;
+    private boolean terminado;
+    private Thread generadorCoches;
+    private Thread colaManager;
 
     public ParkingInteligente() {
+        this.terminado = false;
         this.ocupacionMaximaVIP = new AtomicInteger(0);
         this.ingresosTotales = new AtomicInteger(0);
         this.ocupacionMaximaNormal = new AtomicInteger(0);
@@ -43,7 +47,10 @@ public class ParkingInteligente {
         llegadaCoches();
 
         try {
-            Thread.sleep(30000);
+            Thread.sleep(50000);
+            generadorCoches.join();
+            colaManager.join();
+            terminado = true;
             resultadoFinal();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -60,11 +67,11 @@ public class ParkingInteligente {
     }
 
     private void llegadaCoches() {
-        Thread generadorCoches = new Thread(() -> {
-            for (int i = 0; i < 200; i++) {
+        generadorCoches = new Thread(() -> {
+            for (int i = 0; i < 30; i++) {
                 try {
                     TipoVehiculo tipo = Math.random() < 0.8 ? TipoVehiculo.NORMAL : TipoVehiculo.VIP;
-                    Coche coche = new Coche(i, tipo);
+                    Coche coche = new Coche(i, tipo,ingresosTotales,tiempoTotalEstancia);
                     System.out.printf("Coche-%d (%s) ha llegado al parking.%n", coche.getIdCoche(), coche.getTipo().getTipo());
                     cochesProcesados.incrementAndGet();
                     if (colaCoches.offer(coche)) {
@@ -75,83 +82,69 @@ public class ParkingInteligente {
                         System.out.println("Coche-" + coche.getIdCoche() + " se ha ido, cola llena.");
                         cochesRechazados.incrementAndGet();
                     }
-                    colaCochesMeterseEnSemaforo();
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
         });
+        colaCochesMeterseEnSemaforo();
         generadorCoches.start();
-        try {
-            generadorCoches.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            Logger.getLogger(ParkingInteligente.class.getName()).severe(e.getMessage());
-        }
     }
 
     private void colaCochesMeterseEnSemaforo() {
-        Thread meterCochesCola = new Thread(() -> {
-                try {
-                    if (ocupacionMaximaVIP.get() < 5 - semaforoPlazasVIP.availablePermits()) {
-                        ocupacionMaximaVIP.set(5 - semaforoPlazasVIP.availablePermits());
-                    }
-                    if (ocupacionMaximaNormal.get() < 20 - semaforoPlazasNormales.availablePermits()) {
-                        ocupacionMaximaNormal.set(20 - semaforoPlazasNormales.availablePermits());
-                    }
-                    Thread.sleep(2000);
-                    Coche coche = colaCoches.take();
-                    if (coche.getTipo() == TipoVehiculo.VIP) {
-                        cocheVIPElige(coche);
-                    } else {
-                        cochePlazasNormales(coche);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    Logger.getLogger(ParkingInteligente.class.getName()).severe(e.getMessage());
+        colaManager = new Thread(() -> {
+            while (!colaCoches.isEmpty() || !terminado) {
+                if (ocupacionMaximaVIP.get() < 5 - semaforoPlazasVIP.availablePermits()) {
+                    ocupacionMaximaVIP.set(5 - semaforoPlazasVIP.availablePermits());
                 }
+                if (ocupacionMaximaNormal.get() < 20 - semaforoPlazasNormales.availablePermits()) {
+                    ocupacionMaximaNormal.set(20 - semaforoPlazasNormales.availablePermits());
+                }
+                Coche coche = colaCoches.peek();
+                if (coche != null) {
+                    if (coche.getTipo() == TipoVehiculo.VIP) {
+                        cocheVIPElige();
+                    } else {
+                        cochePlazasNormales();
+                    }
+                }
+            }
         });
-        meterCochesCola.start();
+        colaManager.start();
     }
-    private void cocheVIPElige(Coche coche) {
+    private void cocheVIPElige() {
         if (Math.random() < 0.3) {
             try {
                 if (semaforoPlazasVIP.tryAcquire()){
                     semaforoPlazasVIP.acquire();
-                    Plazas plaza = plazasVIP.take();
-                    cochesCosa(coche, plaza);
-                    plazasVIP.put(plaza);
-                    semaforoPlazasVIP.release();
+                    Coche cocheReal = colaCoches.take();
+                    cocheReal.setPlazasDisponibles(plazasVIP);
+                    cocheReal.setSemaforoUsado(semaforoPlazasVIP);
+                    Thread.ofVirtual().start(cocheReal);
                 } else {
-                    cochePlazasNormales(coche);
+                    cochePlazasNormales();
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 Logger.getLogger(ParkingInteligente.class.getName()).severe(e.getMessage());
             }
         } else {
-            cochePlazasNormales(coche);
+            cochePlazasNormales();
         }
     }
-    private void cochePlazasNormales(Coche coche) {
+    private void cochePlazasNormales() {
         try {
             if (semaforoPlazasNormales.tryAcquire()) {
-                Plazas plaza = plazasNormales.take();
-                cochesCosa(coche, plaza);
-                plazasNormales.put(plaza);
-                semaforoPlazasNormales.release();
+                Coche cocheReal =  colaCoches.take();
+                cocheReal.setPlazasDisponibles(plazasNormales);
+                cocheReal.setSemaforoUsado(semaforoPlazasNormales);
+                Thread.ofVirtual().start(cocheReal);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             Logger.getLogger(ParkingInteligente.class.getName()).severe(e.getMessage());
         }
-    }
-
-    private void cochesCosa(Coche coche, Plazas plaza) {
-        plaza.ocupar();
-        coche.getPlaza(semaforoPlazasNormales, ingresosTotales, tiempoTotalEstancia);
-        plaza.liberar();
     }
     private void resultadoFinal() {
         System.out.println("--- RESUMEN DEL DÍA ---");

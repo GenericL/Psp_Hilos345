@@ -1,14 +1,16 @@
 package org.example.ejercicio4;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class Plazas {
     private final int idPlaza;
     private final TipoVehiculo tipo;
-    private boolean ocupada;
+    private AtomicBoolean ocupada;
 
     public Plazas(int idPlaza, TipoVehiculo tipo) {
         this.idPlaza = idPlaza;
         this.tipo = tipo;
-        this.ocupada = false;
+        this.ocupada = new AtomicBoolean(false);
     }
 
     public int getIdPlaza() {
@@ -16,15 +18,15 @@ public class Plazas {
     }
 
     public boolean isOcupada() {
-        return ocupada;
+        return ocupada.get();
     }
 
     public void ocupar() {
-        this.ocupada = true;
+        this.ocupada = new AtomicBoolean(true);
     }
 
     public void liberar() {
-        this.ocupada = false;
+        this.ocupada = new AtomicBoolean(false);
     }
 
     public TipoVehiculo getTipo() {
