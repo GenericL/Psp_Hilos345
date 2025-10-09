@@ -17,10 +17,6 @@ public class Plazas {
         return idPlaza;
     }
 
-    public boolean isOcupada() {
-        return ocupada.get();
-    }
-
     public void ocupar() {
         this.ocupada = new AtomicBoolean(true);
     }

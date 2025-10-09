@@ -1,6 +1,8 @@
 package org.example.ejercicio4;
 
 
+import org.example.constantes.ConstantesParkingInteligente;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -37,12 +39,12 @@ public class Coche implements Runnable {
         try {
             Plazas plaza = plazasDisponibles.take();
             plaza.ocupar();
-            System.out.printf("Coche-%d (%s) ha aparcado.%n", idCoche, tipo.getTipo());
-            long tiempoEstanciaFinal = Math.round(Math.random() * 20000) + 10000;
+            System.out.printf(ConstantesParkingInteligente.COCHE_HA_APARCADO, idCoche, tipo.getTipo());
+            long tiempoEstanciaFinal = Math.round(Math.random() * ConstantesParkingInteligente.ESTANCIA_ALEATORIA) + ConstantesParkingInteligente.ESTANCIA_FIJA;
             Thread.sleep((tiempoEstanciaFinal));
             tiempoEstancia.addAndGet(tiempoEstanciaFinal);
-            System.out.printf("Coche-%d (%s) sale - - Pagó %.2f€ %n", idCoche, tipo.getTipo(), tipo.getTarifaPorMinuto());
-            dinero.addAndGet((int) tipo.getTarifaPorMinuto()*10);
+            System.out.printf(ConstantesParkingInteligente.COCHE_HA_SALIDO, idCoche, tipo.getTipo(), plaza.getIdPlaza(),plaza.getTipo(), tipo.getTarifaPorMinuto());
+            dinero.addAndGet((int) tipo.getTarifaPorMinuto()*ConstantesParkingInteligente.LONG_Y_SUS_PROBLEMAS);
             plaza.liberar();
             plazasDisponibles.put(plaza);
             semaforoUsado.release();
