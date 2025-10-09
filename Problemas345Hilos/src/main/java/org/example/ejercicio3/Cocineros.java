@@ -3,6 +3,8 @@ package org.example.ejercicio3;
 
 
 
+import org.example.constantes.ConstantesRestaurante;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,7 +18,7 @@ public class Cocineros implements Runnable {
     private final AtomicLong servidos;
     private final AtomicLong tiempoEsperaTotal;
     private final AtomicLong tiempoEsperando;
-    private AtomicBoolean terminado;
+    private final AtomicBoolean terminado;
     public Cocineros(String nombre, BlockingQueue<Pedidos> mesaPedidos, AtomicLong servidos, AtomicLong tiempoEspera, AtomicLong tiempoLibre, AtomicBoolean terminado) {
         this.nombre = nombre;
         this.mesaPedidos = mesaPedidos;
@@ -36,7 +38,7 @@ public class Cocineros implements Runnable {
                 tiempoEsperando.addAndGet(tiempoEspera);
                 tipo = pedido.getTipo();
                 Thread.sleep(tipo.tiempoMs);
-                System.out.println("✅ Cocinero " + nombre + " ha terminado de cocinar: " + tipo.nombre);
+                System.out.printf(ConstantesRestaurante.COCINADO, nombre,tipo.nombre);
                 servidos.incrementAndGet();
                 long tiempoEsperaCliente = System.currentTimeMillis() - pedido.getTiempoEsperando();
                 tiempoEsperaTotal.addAndGet(tiempoEsperaCliente);
@@ -44,7 +46,7 @@ public class Cocineros implements Runnable {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Logger.getLogger(Cocineros.class.getName()).log(Level.SEVERE, "Error en el cocinero " + nombre, e);
+            Logger.getLogger(Cocineros.class.getName()).log(Level.SEVERE, ConstantesRestaurante.ERROR_COCINERO + nombre, e);
         }
     }
 }

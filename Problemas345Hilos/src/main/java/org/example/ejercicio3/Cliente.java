@@ -1,5 +1,7 @@
 package org.example.ejercicio3;
 
+import org.example.constantes.ConstantesRestaurante;
+
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.BlockingQueue;
@@ -27,26 +29,18 @@ public class Cliente implements Runnable {
 
     @Override
     public void run() {
-        String tiempo = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-        System.out.println(tiempo + "🍽️ Cliente-" + id + " ha pedido: " + tipo.nombre);
+        String tiempo = LocalTime.now().format(DateTimeFormatter.ofPattern(ConstantesRestaurante.TIME_PATTERN));
+        System.out.printf(ConstantesRestaurante.PEDIDO, tiempo, id,tipo.nombre);
         try {
             mesaPedidos.put(new Pedidos(id, tipo,mesa));
             mesa.esperarPlatoListo();
-            Thread.sleep(2000);
+            Thread.sleep(ConstantesRestaurante.TIEMPO_ESPERA_CLIENTE);
             mesa.liberarMesa();
             mesasLibres.put(mesa);
             atendidos.incrementAndGet();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Logger.getLogger(Cliente.class.getName()).severe("Error en el cliente " + id + ": " + e.getMessage());
+            Logger.getLogger(Cliente.class.getName()).severe(ConstantesRestaurante.ERROR_CLIENTE + id + ": " + e.getMessage());
         }
-    }
-
-    public TipoPlato getTipo() {
-        return tipo;
-    }
-
-    public int getId() {
-        return id;
     }
 }

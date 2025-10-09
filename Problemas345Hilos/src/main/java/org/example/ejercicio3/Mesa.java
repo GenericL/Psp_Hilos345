@@ -23,16 +23,4 @@ public class Mesa {
     public void notificarPlatoListo() {
         latch.countDown();
     }
-
-    public int getNumero() {
-        return numero;
-    }
-
-    public Cliente getCliente() {
-        return cliente;
-    }
-
-    public void setCliente(Cliente cliente) {
-        this.cliente = cliente;
-    }
 }

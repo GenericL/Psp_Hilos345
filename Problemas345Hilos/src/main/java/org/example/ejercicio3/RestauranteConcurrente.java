@@ -1,6 +1,8 @@
 package org.example.ejercicio3;
 
 
+import org.example.constantes.ConstantesRestaurante;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -23,7 +25,7 @@ public class RestauranteConcurrente {
     private final AtomicLong servidos;
     private int mesasLlenas;
     private final List<Thread> cocinerosList;
-    private AtomicBoolean terminado;
+    private final AtomicBoolean terminado;
 
     public RestauranteConcurrente() {
         this.cocineroEsperando = new AtomicLong(0);
@@ -38,14 +40,14 @@ public class RestauranteConcurrente {
     }
 
     public void start(){
-        System.out.println("🍽️  === RESTAURANTE CON BLOCKING QUEUE ===\n");
+        System.out.println(ConstantesRestaurante.RESTAURANTE_BLOCKINGQUEUE);
         long inicioSimulacion = System.currentTimeMillis();
         iniciarCocineros();
         iniciarMesa();
         llegadaClientes();
         try {
             terminado.set(true);
-            sleep(10000);
+            sleep(ConstantesRestaurante.TIEMPO_ESPERA_RESTAURANTE);
             for (Thread thread : cocinerosList) {
                 thread.join();
             }
@@ -54,7 +56,7 @@ public class RestauranteConcurrente {
             resultadoFinal(tiempoTotal);
         } catch (InterruptedException e) {
             currentThread().interrupt();
-            Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en el Restaurante", e);
+            Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,ConstantesRestaurante.ERROR_RESTAURANTE, e);
         }
     }
 
@@ -70,7 +72,7 @@ public class RestauranteConcurrente {
     }
 
     private void iniciarMesa(){
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= ConstantesRestaurante.NUMERO_MESAS; i++) {
             Mesa mesa = new Mesa(i);
             mesasLibres.add(mesa);
         }
@@ -79,24 +81,24 @@ public class RestauranteConcurrente {
     private void llegadaClientes(){
         Thread generadorClientes = new Thread(() -> {
             try {
-            for (int i = 1; i <= 100; i++) {
+            for (int i = 1; i <= ConstantesRestaurante.NUMERO_CLIENTES; i++) {
 
-                    Mesa mesa = mesasLibres.poll(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    Mesa mesa = mesasLibres.poll(ConstantesRestaurante.TIMEOUT, java.util.concurrent.TimeUnit.MILLISECONDS);
                     if (mesa != null) {
                         Cliente cliente = new Cliente(i, pedidosQueue, mesa, mesasLibres, clientesAtendidos);
                         mesa.sentarCliente(cliente);
                         Thread.ofVirtual().start(cliente);
                     } else {
                         mesasLlenas++;
-                        System.out.printf("❌ Cliente-%d se va, no hay mesas libres",
+                        System.out.printf(ConstantesRestaurante.NO_MESAS_LIBRES,
                                 i);
                     }
-                    Thread.sleep(1000);
+                    Thread.sleep(ConstantesRestaurante.TIMEOUT);
 
             }
             } catch (InterruptedException e) {
                 currentThread().interrupt();
-                Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en la llegada de clientes", e);
+                Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,ConstantesRestaurante.ERROR_LLEGADA_CLIENTES, e);
             }
         });
         generadorClientes.start();
@@ -104,26 +106,26 @@ public class RestauranteConcurrente {
             generadorClientes.join();
         } catch (InterruptedException e) {
             currentThread().interrupt();
-            Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,"Error en la llegada de clientes", e);
+            Logger.getLogger(RestauranteConcurrente.class.getName()).log(Level.SEVERE,ConstantesRestaurante.ERROR_LLEGADA_CLIENTES, e);
         }
     }
 
     private void resultadoFinal(long tiempoTotal){
-        System.out.println("\n--- ESTADÍSTICAS FINALES ---");
-        System.out.printf("Clientes atendidos: %d/%d %s%n",
+        System.out.println(ConstantesRestaurante.ESTADISTICAS_FINALES);
+        System.out.printf(ConstantesRestaurante.CLIENTES_ATENDIDOS,
                 clientesAtendidos.get(), 100,
                 clientesAtendidos.get() == 100 ? "✅" : "⚠️");
-        System.out.printf("Platos servidos: %d%n", servidos.get());
+        System.out.printf(ConstantesRestaurante.PLATOS_SERVIDOS, servidos.get());
         if (clientesAtendidos.get() > 0) {
-            System.out.printf("Tiempo promedio de espera: %.1fs%n",
+            System.out.printf(ConstantesRestaurante.TIEMPO_PROMEDIO_ESPERA,
                     tiempoEsperaTotal.get() / 1000.0 / clientesAtendidos.get());
         }
-        System.out.println("Mesa llena (veces): " + mesasLlenas);
+        System.out.println(ConstantesRestaurante.MESAS_LLENAS + mesasLlenas);
         if (tiempoTotal > 0 && clientesAtendidos.get() > 0) {
             int eficiencia = (int)((clientesAtendidos.get() * 100.0) / 100);
-            System.out.printf("Eficiencia: %d%%%n", eficiencia);
+            System.out.printf(ConstantesRestaurante.EFICIENCIA, eficiencia);
         }
 
-        System.out.printf("Tiempo total simulación: %.1fs%n", tiempoTotal / 1000.0);
+        System.out.printf(ConstantesRestaurante.TIEMPO_TOTAL, tiempoTotal / 1000.0);
     }
 }
